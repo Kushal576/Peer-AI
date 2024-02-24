@@ -4,6 +4,7 @@ from LinkedList import *
 BYZANTINE_NODES=5
 NON_BYZANTINE_NODES=9
 
+
 def SquaredDeviation(n):
     k=0
     EX=0
