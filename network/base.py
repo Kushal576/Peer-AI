@@ -1,13 +1,14 @@
 import socket
 import threading
 
+PORT = 80
 class Node:
     """
     Create a Node in the peer-to-peer network 
     """
-    def __init__(self,ip : str,port: int, list_of_peers: list):
+    def __init__(self,ip : str, list_of_peers: list):
         self.ip = ip
-        self.port = port
+        self.port = PORT
         self.peers = list_of_peers
 
         # Create a seperate thread for server and start the thread
@@ -17,9 +18,9 @@ class Node:
 
         # Connect to every peer in the network as a client
         for peer in list_of_peers:
-            self.connect_to_peer(peer[0], peer[1])
+            self.connect_to_peer(peer, PORT)
         
-        
+
     def handle_client(self, client_socket):
         """Function to handle incoming connections from other peers"""
         while True:
@@ -37,7 +38,7 @@ class Node:
         server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server.bind((self.ip, self.port))
         server.listen(5)
-        print("Server started, listening on port 9999")
+        print("Server started, listening on port {}".format(self.port))
 
         while True:
             client_socket, client_addr = server.accept()
