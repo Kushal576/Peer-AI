@@ -85,7 +85,7 @@ def join_network():
     peer = request.json.get('peer')
     _type = request.json.get('type')
     print(request.environ['SERVER_NAME'])
-    dotenv.load_dotenv(".env")
+    dotenv.load_dotenv("../.env")
     own_ip = os.getenv("IP")
     own_port = os.getenv("PORT")
     own_type = os.getenv("TYPE")

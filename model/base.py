@@ -1,6 +1,12 @@
 from torch import nn
-from utils.utils import num_params
+# from utils.utils import num_params
 import torch.nn.functional as F
+
+
+def num_params(model):
+    """ """
+    return sum(p.numel() for p in model.parameters() if p.requires_grad)
+
 
 # define fully connected NN
 class MLP(nn.Module):

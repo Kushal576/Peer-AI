@@ -2,7 +2,9 @@ from flask import Flask, request, jsonify
 import requests
 import threading
 import time
-import copy, os, dotenv
+import copy, os, dotenv, torch
+from ..model.base import MLP
+
 app = Flask(__name__)
 
 # Store information about peers
@@ -12,6 +14,7 @@ peers = {
     "aggregation":set(),
     "other":set()
 }
+
 messages = []
 
 # Function to send message to all peers
@@ -28,7 +31,15 @@ def send_message_to_all(message):
 @app.route('/receive', methods=['POST'])
 def receive_message():
     message = request.json.get('message')
-    messages.append(message)
+
+    if message =="global_model":
+        data = request.json.get('data')
+
+        
+        model = MLP()
+        model.load_state_dict(data)
+        torch.save(model, "global_model.pth")
+    # messages.append(message)
     return jsonify({"status": "Message received"})
 
 # Endpoint to send message to all peers
@@ -96,6 +107,9 @@ def join_network():
 
 # Function to periodically check peer availability
 def check_peer_availability():
+    """
+    uses ping functionality of the server
+    """
     while True:
         time.sleep(10)
         _peers = copy.deepcopy(peers['verification'])
@@ -148,6 +162,10 @@ def check_peer_availability():
 # Endpoint for peers to ping and check availability
 @app.route('/ping', methods=["GET"])
 def ping():
+    """
+    returns status = OK if gets message
+    required to check if the server is online
+    """
     return jsonify({"status": "OK"})
 
 if __name__ == '__main__':
