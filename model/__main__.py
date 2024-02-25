@@ -21,12 +21,17 @@ mlp = base.MLP()
 # global_model = copy.deepcopy(mlp)
 modelList = Queue()
 
-def traininig(global_model):
+def training(global_model):
     dataset = torch.load(str(_dataset))
+    pth = os.path.exists('global_model.pth')
+
+    if pth:
+        global_model.load_state_dict(torch.load('global_model.pth'))
+
     local_model = train_client(dataset, global_model=global_model, num_local_epochs=epoch,lr =lr, optim = torch.optim.SGD)
     send_model_for_optimization(local_model)
     time.sleep(sleep_time)
-    
+
 
 
 
@@ -85,7 +90,7 @@ def train_test(global_model):
 def main():
     if str(_type) == "training":
 
-        traininig()
+        training()
 
     if str(_type) == "aggregating":
         global_model = copy.deepcopy(mlp)

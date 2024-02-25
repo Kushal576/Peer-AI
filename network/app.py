@@ -3,7 +3,7 @@ import requests
 import threading
 import time
 import copy, os, dotenv, torch
-from ..model.base import MLP
+from model.base import MLP
 
 app = Flask(__name__)
 
