@@ -4,7 +4,8 @@ import threading
 import time
 import copy, os, dotenv, torch
 from model.base import MLP
-
+from model.__main__ import modelList
+import uuid
 app = Flask(__name__)
 
 # Store information about peers
@@ -41,6 +42,19 @@ def receive_message():
         torch.save(model, "global_model.pth")
     # messages.append(message)
     return jsonify({"status": "Message received"})
+
+@app.route('/receive_model', method=['POST'])
+def receive_model():
+    model = request.files['file']
+    if os.getenv('TYPE') == 'aggregator':
+        model_uuid = uuid.uuid4()
+        model.save('localmodels/localmodel_{}.pth'.format(model_uuid))
+        _model = torch.load('localmodels/localmodel_{}.pth')
+        modelList.enqueue(_model)
+    else:
+        model.save('globalmodel.pth')
+    
+    return jsonify({"status":"Model Received."})
 
 # Endpoint to send message to all peers
 @app.route('/send_to_all', methods=['POST'])

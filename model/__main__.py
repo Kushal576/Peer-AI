@@ -5,7 +5,7 @@ from .FedAVG import fed_avg_experiment, validate
 import time, random
 from .queue import Queue
 import numpy as np
-from ..network.client import send_model_for_optimization
+from network.client import send_model_for_optimization
 
 
 dotenv.load_dotenv(".env")
@@ -13,7 +13,7 @@ _type = os.getenv("TYPE")
 _dataset = os.getenv("DATASET_PATH")
 
 
-epoch = 10
+epoch = 4
 lr = 1e-3
 sleep_time = 20
 
@@ -29,7 +29,7 @@ def training(global_model):
         global_model.load_state_dict(torch.load('global_model.pth'))
 
     local_model = train_client(dataset, global_model=global_model, num_local_epochs=epoch,lr =lr, optim = torch.optim.SGD)
-    send_model_for_optimization(local_model)
+    send_model_for_optimization('192.168.241.11:8000',local_model)
     time.sleep(sleep_time)
 
 
@@ -89,10 +89,13 @@ def train_test(global_model):
 
 def main():
     if str(_type) == "training":
+        global_model = copy.deepcopy(mlp)
+        for i in range(10):
+            training(global_model)
 
-        training()
-
-    if str(_type) == "aggregating":
+    if str(_type) == "aggregation":
         global_model = copy.deepcopy(mlp)
         train_test(global_model=global_model)
-        pass
+        
+
+main()
