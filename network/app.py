@@ -4,7 +4,7 @@ import threading
 import time
 import copy, os, dotenv, torch
 from model.base import MLP
-from model.__main__ import modelList
+from model.__main__ import enqueue_model_list
 import uuid
 app = Flask(__name__)
 
@@ -30,7 +30,7 @@ def send_message_to_all(message):
 
 # Endpoint to receive messages
 @app.route('/receive', methods=['POST'])
-def receive_message():
+def recv1():
     message = request.json.get('message')
 
     if message =="global_model":
@@ -46,11 +46,13 @@ def receive_message():
 @app.route('/receive_model', methods=['POST'])
 def receive_model():
     model = request.files['file']
-    if os.getenv('TYPE') == 'aggregator':
+    if os.getenv('TYPE') == 'aggregation':
         model_uuid = uuid.uuid4()
-        model.save('localmodels/localmodel_{}.pth'.format(model_uuid))
-        _model = torch.load('localmodels/localmodel_{}.pth')
-        modelList.enqueue(_model)
+        if not os.path.exists('localmodels'):
+            os.mkdir('localmodels')
+        model.save(f'localmodels/localmodel_{model_uuid}.pth')
+        _model = torch.load(f'localmodels/localmodel_{model_uuid}.pth')
+        enqueue_model_list(_model)
     else:
         model.save('globalmodel.pth')
     
