@@ -27,13 +27,13 @@ def fed_avg_experiment(global_model, local_model,  num_clients_per_round=4):
 
 criterion = torch.nn.CrossEntropyLoss()
 
-def validate(model):
+def validate(model, path = "dataloader_test.pth"):
     model = model.to(os.getenv("device"))
     model.eval()
     correct = 0
     total = 0
     with torch.no_grad():
-        for (t, (x,y)) in enumerate(torch.load("dataloader_test.pth")):
+        for (t, (x,y)) in enumerate(torch.load(path)):
             x = x.to(os.getenv("device"))
             y = y.to(os.getenv("device"))
             out = model(x)

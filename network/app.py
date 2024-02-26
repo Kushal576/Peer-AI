@@ -43,7 +43,7 @@ def receive_message():
     # messages.append(message)
     return jsonify({"status": "Message received"})
 
-@app.route('/receive_model', method=['POST'])
+@app.route('/receive_model', methods=['POST'])
 def receive_model():
     model = request.files['file']
     if os.getenv('TYPE') == 'aggregator':
@@ -182,8 +182,8 @@ def ping():
     """
     return jsonify({"status": "OK"})
 
-if __name__ == '__main__':
-    # Start the thread for checking peer availability
-    threading.Thread(target=check_peer_availability).start()
-    # Run Flask app
-    app.run(host='0.0.0.0', port=8000)
+# if __name__ == '__main__':
+#     # Start the thread for checking peer availability
+#     threading.Thread(target=check_peer_availability).start()
+#     # Run Flask app
+#     app.run(host='0.0.0.0', port=8000)

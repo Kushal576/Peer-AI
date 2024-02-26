@@ -13,9 +13,9 @@ _type = os.getenv("TYPE")
 _dataset = os.getenv("DATASET_PATH")
 
 
-epoch = 4
+epoch = 10
 lr = 1e-3
-sleep_time = 20
+sleep_time = 0
 
 mlp = base.MLP()
 # global_model = copy.deepcopy(mlp)
@@ -29,8 +29,12 @@ def training(global_model):
         global_model.load_state_dict(torch.load('global_model.pth'))
 
     local_model = train_client(dataset, global_model=global_model, num_local_epochs=epoch,lr =lr, optim = torch.optim.SGD)
+    acc = validate(local_model, "dataloader_0.pth")
+
     send_model_for_optimization('192.168.241.11:8000',local_model)
     time.sleep(sleep_time)
+
+    return acc
 
 
 
@@ -90,12 +94,14 @@ def train_test(global_model):
 def main():
     if str(_type) == "training":
         global_model = copy.deepcopy(mlp)
+        accuracy = []
         for i in range(10):
-            training(global_model)
+            acc = training(global_model)
+            accuracy.append(acc)
+            print(acc)
+        print(accuracy)
 
     if str(_type) == "aggregation":
         global_model = copy.deepcopy(mlp)
         train_test(global_model=global_model)
         
-
-main()
