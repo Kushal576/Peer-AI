@@ -93,10 +93,10 @@ def aggregating():
                 # except:
                 global_model3 = fed_avg_experiment(global_model=global_model2, local_model=local_model)
                 #     raise Exception("No global model found")
-                acc = validate(global_model3)
-                acc2 = validate(global_model3, "dataloader_full.pth")
-                accuracy.append(acc)
-                training_acc.append(acc2)
+                # acc = validate(global_model3)
+                # acc2 = validate(global_model3, "dataloader_full.pth")
+                # accuracy.append(acc)
+                # training_acc.append(acc2)
                 torch.save(global_model3.state_dict(), 'global_model.pth')
                 for ip in peers['training']:
                     send_model_for_optimization(ip, global_model3)
@@ -108,8 +108,8 @@ def aggregating():
             
             round +=1
 
-            np.save(f"validation_accuracy_{round}.npy", np.array(accuracy))
-            np.save("training_accuracy_glob.pth", np.array(training_acc))
+            # np.save(f"validation_accuracy_{round}.npy", np.array(accuracy))
+            # np.save("training_accuracy_glob.pth", np.array(training_acc))
 
 
 

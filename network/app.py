@@ -12,8 +12,8 @@ app = Flask(__name__)
 # Store information about peers
 peers = {
     # "training":["20.121.57.95:80", "20.121.62.226:80", "172.203.99.79:80", "172.208.98.225:80"],
-    "training":["192.168.206.177:8000"],
-    "aggregating":["192.168.206.11:8000"],
+    "training":set(["192.168.206.177:8000"]),
+    "aggregating":set(["192.168.206.11:8000"]),
     "verification":set(),
     "other":set()
 }
@@ -48,7 +48,7 @@ messages = []
 @app.route('/receive_model', methods=['POST'])
 def receive_model():
     model = request.files['file']
-    if os.getenv('TYPE') == 'aggregation':
+    if os.getenv('TYPE') == 'aggregating':
         model_uuid = uuid.uuid4()
         if not os.path.exists('localmodels'):
             os.mkdir('localmodels')
@@ -114,7 +114,7 @@ def join_network():
 
     for peer  in (peers[_peers] for _peers in peers):
         for p in peer:
-            resp = requests.post(f"http://{p}/add", json={"peer": str(own_ip) +  ":"+ str(own_port), "type": str(own_type)})
+            resp = requests.post(f"http://{p}/add", json={"peer": str(own_ip) +":"+ str(own_port), "type": str(own_type)})
   
     return jsonify({"peers": str(peers)})
 
@@ -146,7 +146,9 @@ def start_train():
     epoch = request.json.get('epoch')
 
     for peer in peers["training"]:
-        resp = requests.post(f"http://{peer}/train", json=jsonify({"optimizer": optimizer, "learning_rate": lr ,"epoch": epoch}))
+        print(peer)
+        resp = requests.post(f"http://{peer}/train", json={"optimizer": optimizer, "learning_rate": lr ,"epoch": epoch})
+        print(resp)
 
     return jsonify({"message": "Started Training in all the training nodes."})
 
