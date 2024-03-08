@@ -13,8 +13,8 @@ app = Flask(__name__)
 peers = {
     # "training":["20.121.57.95:80", "20.121.62.226:80", "172.203.99.79:80", "172.208.98.225:80"],
     "training":["192.168.206.177:8000"],
-    "verification":["192.168.206.11:8000"],
-    "aggregation":set(),
+    "aggregating":["192.168.206.11:8000"],
+    "verification":set(),
     "other":set()
 }
 
