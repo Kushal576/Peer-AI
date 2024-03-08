@@ -112,7 +112,7 @@ def join_network():
     print(own_ip)
     # send join request to peer
 
-    for _type, peer  in (_peers for _peers in peers):
+    for peer  in (peers[_peers] for _peers in peers):
         for p in peer:
             resp = requests.post(f"http://{p}/add", json={"peer": str(own_ip) +  ":"+ str(own_port), "type": str(own_type)})
   
@@ -127,7 +127,6 @@ def join_network():
 
 #     # print(peers)
 
-    return jsonify({"status": "Peer added to the network"})
 
 
 @app.route("/add", methods=['POST'])
