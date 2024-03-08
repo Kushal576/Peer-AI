@@ -4,3 +4,7 @@ env/
 ips
 *.pth
 *.npy
+*.pdf
+
+export*.py
+test*

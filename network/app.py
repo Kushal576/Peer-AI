@@ -10,8 +10,8 @@ app = Flask(__name__)
 
 # Store information about peers
 peers = {
-    "training":set(),
-    "verification":set(),
+    "training":["20.121.57.95:80", "20.121.62.226:80", "172.203.99.79:80", "172.208.98.225:80"],
+    "verification":["20.62.194.14:80"],
     "aggregation":set(),
     "other":set()
 }
@@ -99,7 +99,7 @@ def message_broadcast(message : str, _type : str):
 
 # Endpoint to join the peer network
 @app.route('/join', methods=['POST'])
-def join_network():
+async def join_network():
     peer = request.json.get('peer')
     _type = request.json.get('type')
     print(request.environ['SERVER_NAME'])
@@ -129,7 +129,7 @@ def check_peer_availability():
     while True:
         time.sleep(10)
         _peers = copy.deepcopy(peers['verification'])
-
+        print(peers)
         for peer in _peers:
             try:
                 response = requests.get("http://" + peer + "/ping")
@@ -183,6 +183,8 @@ def ping():
     required to check if the server is online
     """
     return jsonify({"status": "OK"})
+
+threading.Thread(target=check_peer_availability).start()
 
 # if __name__ == '__main__':
 #     # Start the thread for checking peer availability
