@@ -6,15 +6,22 @@ import time, random
 from .queue import Queue
 import numpy as np
 from network.client import send_model_for_optimization
-from network.app import peers
 
 dotenv.load_dotenv(".env")
 _dataset = os.getenv("DATASET_PATH")
 
+# Store information about peers
+peers = {
+    # "training":["20.121.57.95:80", "20.121.62.226:80", "172.203.99.79:80", "172.208.98.225:80"],
+    "training":["192.168.206.177:8000"],
+    "aggregating":["192.168.206.11:8000"],
+    "verification":set(),
+    "other":set()
+}
 
-epoch = 1
-lr = 1e-3
-sleep_time = 0
+# epoch = 5
+# lr = 1e-3
+sleep_time = 20
 
 mlp = base.MLP()
 # global_model = copy.deepcopy(mlp)
@@ -24,7 +31,7 @@ def enqueue_model_list(model):
     modelList.enqueue(model)
     return True
 
-def training(global_model, optim = torch.optim.SGD):
+def training(global_model, optim = torch.optim.SGD, lr = 1e-3, epoch = 5):
     dataset = torch.load(str(_dataset))
     pth = os.path.exists('global_model.pth')
 
@@ -35,6 +42,7 @@ def training(global_model, optim = torch.optim.SGD):
     acc = validate(local_model, dataset)
 
     send_model_for_optimization(peers['aggregating'][0],local_model)
+    print(acc)
     time.sleep(sleep_time)
 
     return acc
@@ -55,7 +63,7 @@ def traininig_test(dataset, name):
         if pth:
             global_model.load_state_dict(torch.load('global_model.pth'))
 
-        local_model = train_client(dataset, global_model=global_model, num_local_epochs=epoch,lr =lr, optim = torch.optim.SGD)
+        local_model = train_client(dataset, global_model=global_model, num_local_epochs=5,lr =1e-3, optim = torch.optim.SGD)
         acc = validate(local_model, name)
         local_accuracy[name].append(acc)
         modelList.enqueue(local_model)
@@ -120,13 +128,13 @@ def train_test(global_model):
     np.save('accuracy.npy+', np.array(accuracy))
     
 
-def train(optimizer):
+def train(optimizer, lr, epoch):
     global_model = copy.deepcopy(mlp)
     accuracy = []
     for i in range(10):
-        acc = training(global_model, optim=optimizer)
+        acc = training(global_model, optim=optimizer, lr = lr, epoch = epoch)
         accuracy.append(acc)
-        print(acc)
+        # print(acc)
         np.save("accuracy_{}.npy".format(str(i)), acc)
 
     np.save("accuracy_final.npy", accuracy)

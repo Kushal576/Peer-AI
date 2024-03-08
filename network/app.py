@@ -12,7 +12,7 @@ app = Flask(__name__)
 # Store information about peers
 peers = {
     # "training":["20.121.57.95:80", "20.121.62.226:80", "172.203.99.79:80", "172.208.98.225:80"],
-    "training":["192.168.206.11:8000", "192.168.206.177:8000"],
+    "training":["192.168.206.177:8000"],
     "verification":["192.168.206.11:8000"],
     "aggregation":set(),
     "other":set()
@@ -100,34 +100,65 @@ def receive_model():
 #         raise Exception("Message Broadcast Failed")
 
 # Endpoint to join the peer network
-# @app.route('/join', methods=['POST'])
-# async def join_network():
-#     peer = request.json.get('peer')
-#     _type = request.json.get('type')
-#     print(request.environ['SERVER_NAME'])
-#     dotenv.load_dotenv(".env")
-#     own_ip = os.getenv("IP")
-#     own_port = os.getenv("PORT")
-#     own_type = os.getenv("TYPE")
-#     print(own_ip)
-#     # send join request to peer
-#     if peer not in peers[str(_type)]:
-#         peers[str(_type)].add(peer)
-#         resp = requests.post("http://" + peer + "/join", json={"peer": str(own_ip) +  ":"+ str(own_port), "type": str(own_type)})
-#         if resp.status_code != 200:
-#             return jsonify({"status": "Error while adding peer"})
+@app.route('/join', methods=['POST'])
+def join_network():
+    peer = request.json.get('peer')
+    _type = request.json.get('type')
+    print(request.environ['SERVER_NAME'])
+    dotenv.load_dotenv(".env")
+    own_ip = os.getenv("IP")
+    own_port = os.getenv("PORT")
+    own_type = os.getenv("TYPE")
+    print(own_ip)
+    # send join request to peer
+
+    for _type, peer  in (_peers for _peers in peers):
+        for p in peer:
+            resp = requests.post(f"http://{p}/add", json={"peer": str(own_ip) +  ":"+ str(own_port), "type": str(own_type)})
+  
+    return jsonify({"peers": str(peers)})
+
+    # if peer not in peers[str(_type)]:
+    #     peers[str(_type)].add(peer)
+    #     resp = requests.post("http://" + peer + "/join", json={"peer": str(own_ip) +  ":"+ str(own_port), "type": str(own_type)})
+    #     if resp.status_code != 200:
+    #         return jsonify({"status": "Error while adding peer"})
 
 
 #     # print(peers)
 
-#     return jsonify({"status": "Peer added to the network"})
-    
+    return jsonify({"status": "Peer added to the network"})
 
+
+@app.route("/add", methods=['POST'])
+def add():
+    peer = request.json.get('peer')
+    _type = request.json.get('type')  
+
+    if peer not in peers[str(_type)]:
+        peers[str(_type)].add(peer)
+
+    return jsonify({"message": f"Added peer {peer} to node"})
+
+@app.route('/start_train', methods=['POST'])
+def start_train():
+    optimizer = request.json.get('optimizer')
+    lr = request.json.get('learning_rate')
+    epoch = request.json.get('epoch')
+
+    for peer in peers["training"]:
+        resp = requests.post(f"http://{peer}/train", json=jsonify({"optimizer": optimizer, "learning_rate": lr ,"epoch": epoch}))
+
+    return jsonify({"message": "Started Training in all the training nodes."})
+
+    
 # Endpoint to join the peer network
 @app.route('/train', methods=['POST'])
 def train():
-
     optimizer = request.json.get('optimizer')
+    lr = request.json.get('learning_rate')
+    epoch = request.json.get('epoch')
+
     dotenv.load_dotenv(".env")
     own_type = os.getenv("TYPE")
 
@@ -136,21 +167,11 @@ def train():
     else:
         optim = torch.optim.SGD
     if own_type == "training":
-        threading.Thread(target=model_train, args=(optim)).start()
-        pass
+        threading.Thread(target=model_train, args=(optim,float(lr), int(epoch))).start()
+        return jsonify({"message": "Started Training Process."})
 
     return jsonify({"message": "Peer not of type training!"})
-    # send join request to peer
-    # if peer not in peers[str(_type)]:
-    #     peers[str(_type)].add(peer)
-    #     resp = requests.post("http://" + peer + "/join", json={"peer": str(own_ip) +  ":"+ str(own_port), "type": str(own_type)})
-    #     if resp.status_code != 200:
-    #         return jsonify({"status": "Error while adding peer"})
 
-
-    # print(peers)
-
-    return jsonify({"status": "Peer added to the network"})
 
 
 @app.route('/start_aggregate', methods=['POST'])
@@ -164,12 +185,7 @@ def aggregate():
     if own_type == "aggregating":
         threading.Thread(target=aggregating).start()
         return jsonify({"message":"Started Aggregating Process!"})
-    # send join request to peer
-    # if peer not in peers[str(_type)]:
-    #     peers[str(_type)].add(peer)
-    #     resp = requests.post("http://" + peer + "/join", json={"peer": str(own_ip) +  ":"+ str(own_port), "type": str(own_type)})
-    #     if resp.status_code != 200:
-    #         return jsonify({"status": "Error while adding peer"})
+
     return jsonify({"message": "Node Type not Aggregating"})
 
 
@@ -236,7 +252,7 @@ def ping():
     """
     return jsonify({"status": "OK"})
 
-threading.Thread(target=check_peer_availability).start()
+# threading.Thread(target=check_peer_availability).start()
 
 # if __name__ == '__main__':
 #     # Start the thread for checking peer availability
