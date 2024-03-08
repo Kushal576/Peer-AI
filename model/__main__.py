@@ -24,15 +24,15 @@ def enqueue_model_list(model):
     modelList.enqueue(model)
     return True
 
-def training(global_model):
+def training(global_model, optim = torch.optim.SGD):
     dataset = torch.load(str(_dataset))
     pth = os.path.exists('global_model.pth')
 
     if pth:
         global_model.load_state_dict(torch.load('global_model.pth'))
 
-    local_model = train_client(dataset, global_model=global_model, num_local_epochs=epoch,lr =lr, optim = torch.optim.SGD)
-    acc = validate(local_model, "dataloader_0.pth")
+    local_model = train_client(dataset, global_model=global_model, num_local_epochs=epoch,lr =lr, optim = optim)
+    acc = validate(local_model, dataset)
 
     send_model_for_optimization(peers['aggregating'][0],local_model)
     time.sleep(sleep_time)
@@ -72,38 +72,37 @@ def aggregating():
     #    time.sleep(10)
     global_model2 = copy.deepcopy(mlp)
     print("Run Main Here")
-    while not modelList.is_empty():
-        local_model = modelList.dequeue()
-        try:
+    while True:
+        while not modelList.is_empty():
+            local_model = modelList.dequeue()
+            try:
 
-            pth = os.path.exists('global_model.pth')
+                pth = os.path.exists('global_model.pth')
 
-            if pth:
-                global_model2.load_state_dict(torch.load('global_model.pth'))
-            # try:
-            # except:
-            global_model3 = fed_avg_experiment(global_model=global_model2, local_model=local_model)
-            #     raise Exception("No global model found")
-            acc = validate(global_model3)
-            acc2 = validate(global_model3, "dataloader_full.pth")
-            accuracy.append(acc)
-            training_acc.append(acc2)
-            torch.save(global_model3.state_dict(), 'global_model.pth')
-            for ip in peers['training']:
-                send_model_for_optimization(ip, global_model3)
-            print(" Global model updated successfully")
+                if pth:
+                    global_model2.load_state_dict(torch.load('global_model.pth'))
+                # try:
+                # except:
+                global_model3 = fed_avg_experiment(global_model=global_model2, local_model=local_model)
+                #     raise Exception("No global model found")
+                acc = validate(global_model3)
+                acc2 = validate(global_model3, "dataloader_full.pth")
+                accuracy.append(acc)
+                training_acc.append(acc2)
+                torch.save(global_model3.state_dict(), 'global_model.pth')
+                for ip in peers['training']:
+                    send_model_for_optimization(ip, global_model3)
+                print(" Global model updated successfully")
 
-        except:
-            modelList.enqueue(local_model)
-            raise Exception("Local model update failed. ")
-        
-        round +=1
-
-        np.save(f"accuracy_{round}.npy", np.array(accuracy))
-        np.save("training_accuracy_glob.pth", np.array(training_acc))
-
-
+            except:
+                modelList.enqueue(local_model)
+                raise Exception("Local model update failed. ")
             
+            round +=1
+
+            np.save(f"validation_accuracy_{round}.npy", np.array(accuracy))
+            np.save("training_accuracy_glob.pth", np.array(training_acc))
+
 
 
 def train_test(global_model):
@@ -121,10 +120,20 @@ def train_test(global_model):
     np.save('accuracy.npy+', np.array(accuracy))
     
 
+def train(optimizer):
+    global_model = copy.deepcopy(mlp)
+    accuracy = []
+    for i in range(10):
+        acc = training(global_model, optim=optimizer)
+        accuracy.append(acc)
+        print(acc)
+        np.save("accuracy_{}.npy".format(str(i)), acc)
+
+    np.save("accuracy_final.npy", accuracy)
+    print(accuracy)
 
 
 def main():
-    print("HERERERRREERERER")
     if str(os.getenv('TYPE')) == "training":
         global_model = copy.deepcopy(mlp)
         accuracy = []

@@ -1,47 +1,49 @@
 from flask import Flask, request, jsonify
 import requests
 import threading
-import time
+import time, torch
 import copy, os, dotenv, torch
 from model.base import MLP
-from model.__main__ import enqueue_model_list
+from model.__main__ import enqueue_model_list, aggregating
+from model.__main__ import train as model_train
 import uuid
 app = Flask(__name__)
 
 # Store information about peers
 peers = {
-    "training":["20.121.57.95:80", "20.121.62.226:80", "172.203.99.79:80", "172.208.98.225:80"],
-    "verification":["20.62.194.14:80"],
+    # "training":["20.121.57.95:80", "20.121.62.226:80", "172.203.99.79:80", "172.208.98.225:80"],
+    "training":["192.168.206.11:8000", "192.168.206.177:8000"],
+    "verification":["192.168.206.11:8000"],
     "aggregation":set(),
     "other":set()
 }
 
 messages = []
 
-# Function to send message to all peers
-def send_message_to_all(message):
-    try:
-        for _peer in peers:
-            print(_peer)
-            for peer in peers[_peer]:
-                requests.post("http://" + peer + "/receive", json={"message": message})
-    except:
-        raise Exception("Message send Failed")
+# # Function to send message to all peers
+# def send_message_to_all(message):
+#     try:
+#         for _peer in peers:
+#             print(_peer)
+#             for peer in peers[_peer]:
+#                 requests.post("http://" + peer + "/receive", json={"message": message})
+#     except:
+#         raise Exception("Message send Failed")
 
-# Endpoint to receive messages
-@app.route('/receive', methods=['POST'])
-def recv1():
-    message = request.json.get('message')
+# # Endpoint to receive messages
+# @app.route('/receive', methods=['POST'])
+# def recv1():
+#     message = request.json.get('message')
 
-    if message =="global_model":
-        data = request.json.get('data')
+#     if message =="global_model":
+#         data = request.json.get('data')
 
         
-        model = MLP()
-        model.load_state_dict(data)
-        torch.save(model, "global_model.pth")
-    # messages.append(message)
-    return jsonify({"status": "Message received"})
+#         model = MLP()
+#         model.load_state_dict(data)
+#         torch.save(model, "global_model.pth")
+#     # messages.append(message)
+#     return jsonify({"status": "Message received"})
 
 @app.route('/receive_model', methods=['POST'])
 def receive_model():
@@ -58,67 +60,117 @@ def receive_model():
     
     return jsonify({"status":"Model Received."})
 
-# Endpoint to send message to all peers
-@app.route('/send_to_all', methods=['POST'])
-def send_to_all():
-    message = request.json.get('message')
-    send_message_to_all(message)
-    return jsonify({"status": "Message sent to all peers"})
+# # Endpoint to send message to all peers
+# @app.route('/send_to_all', methods=['POST'])
+# def send_to_all():
+#     message = request.json.get('message')
+#     send_message_to_all(message)
+#     return jsonify({"status": "Message sent to all peers"})
 
 # # Endpoint to send message to a specific peer
-@app.route('/send_to_peer', methods=['POST'])
-def send_to_peer():
-    peer = request.json.get('peer')
-    message = request.json.get('message')
-    requests.post("http://" + peer + "/receive", json={"message": message})
-    return jsonify({"status": "Message sent to peer"})
+# @app.route('/send_to_peer', methods=['POST'])
+# def send_to_peer():
+#     peer = request.json.get('peer')
+#     message = request.json.get('message')
+#     requests.post("http://" + peer + "/receive", json={"message": message})
+#     return jsonify({"status": "Message sent to peer"})
 
-def send_message(peer: str, message: str):
-    """
-    peer : str :- IP:PORT of the peer to send the message
-    message : str :- Message to be sent to the peer
-    """
-    try:
-        requests.post("http://" + peer + '/receive', json={"message": message})
-    except:
-        raise Exception("Sending message to peer failed.")
-    return True
+# def send_message(peer: str, message: str):
+#     """
+#     peer : str :- IP:PORT of the peer to send the message
+#     message : str :- Message to be sent to the peer
+#     """
+#     try:
+#         requests.post("http://" + peer + '/receive', json={"message": message})
+#     except:
+#         raise Exception("Sending message to peer failed.")
+#     return True
 
-def message_broadcast(message : str, _type : str):
-    """
-    message : str :- message to be broadcasted to the peer network
-    _type : str :- type of peers to broadcast the message, 'all' if to be broadcasted for 
-                    every peer in the network
-    """
-    try:
-        for _peer in (peers if _type == 'all' else peers[str(_type)]):
-            for peer in peers[_peer]:
-                send_message(peer, message)
-    except:
-        raise Exception("Message Broadcast Failed")
+# def message_broadcast(message : str, _type : str):
+#     """
+#     message : str :- message to be broadcasted to the peer network
+#     _type : str :- type of peers to broadcast the message, 'all' if to be broadcasted for 
+#                     every peer in the network
+#     """
+#     try:
+#         for _peer in (peers if _type == 'all' else peers[str(_type)]):
+#             for peer in peers[_peer]:
+#                 send_message(peer, message)
+#     except:
+#         raise Exception("Message Broadcast Failed")
 
 # Endpoint to join the peer network
-@app.route('/join', methods=['POST'])
-async def join_network():
-    peer = request.json.get('peer')
-    _type = request.json.get('type')
-    print(request.environ['SERVER_NAME'])
+# @app.route('/join', methods=['POST'])
+# async def join_network():
+#     peer = request.json.get('peer')
+#     _type = request.json.get('type')
+#     print(request.environ['SERVER_NAME'])
+#     dotenv.load_dotenv(".env")
+#     own_ip = os.getenv("IP")
+#     own_port = os.getenv("PORT")
+#     own_type = os.getenv("TYPE")
+#     print(own_ip)
+#     # send join request to peer
+#     if peer not in peers[str(_type)]:
+#         peers[str(_type)].add(peer)
+#         resp = requests.post("http://" + peer + "/join", json={"peer": str(own_ip) +  ":"+ str(own_port), "type": str(own_type)})
+#         if resp.status_code != 200:
+#             return jsonify({"status": "Error while adding peer"})
+
+
+#     # print(peers)
+
+#     return jsonify({"status": "Peer added to the network"})
+    
+
+# Endpoint to join the peer network
+@app.route('/train', methods=['POST'])
+def train():
+
+    optimizer = request.json.get('optimizer')
     dotenv.load_dotenv(".env")
-    own_ip = os.getenv("IP")
-    own_port = os.getenv("PORT")
     own_type = os.getenv("TYPE")
-    print(own_ip)
+
+    if optimizer == "ADA":
+        optim = torch.optim.Adagrad
+    else:
+        optim = torch.optim.SGD
+    if own_type == "training":
+        threading.Thread(target=model_train, args=(optim)).start()
+        pass
+
+    return jsonify({"message": "Peer not of type training!"})
     # send join request to peer
-    if peer not in peers[str(_type)]:
-        peers[str(_type)].add(peer)
-        resp = requests.post("http://" + peer + "/join", json={"peer": str(own_ip) +  ":"+ str(own_port), "type": str(own_type)})
-        if resp.status_code != 200:
-            return jsonify({"status": "Error while adding peer"})
+    # if peer not in peers[str(_type)]:
+    #     peers[str(_type)].add(peer)
+    #     resp = requests.post("http://" + peer + "/join", json={"peer": str(own_ip) +  ":"+ str(own_port), "type": str(own_type)})
+    #     if resp.status_code != 200:
+    #         return jsonify({"status": "Error while adding peer"})
 
 
     # print(peers)
 
     return jsonify({"status": "Peer added to the network"})
+
+
+@app.route('/start_aggregate', methods=['POST'])
+def aggregate():
+    dotenv.load_dotenv(".env")
+    own_ip = os.getenv("IP")
+    own_port = os.getenv("PORT")
+    own_type = os.getenv("TYPE")
+    print(own_ip)
+
+    if own_type == "aggregating":
+        threading.Thread(target=aggregating).start()
+        return jsonify({"message":"Started Aggregating Process!"})
+    # send join request to peer
+    # if peer not in peers[str(_type)]:
+    #     peers[str(_type)].add(peer)
+    #     resp = requests.post("http://" + peer + "/join", json={"peer": str(own_ip) +  ":"+ str(own_port), "type": str(own_type)})
+    #     if resp.status_code != 200:
+    #         return jsonify({"status": "Error while adding peer"})
+    return jsonify({"message": "Node Type not Aggregating"})
 
 
 # Function to periodically check peer availability
