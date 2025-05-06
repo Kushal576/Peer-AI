@@ -110,12 +110,3 @@ Traditional centralized ML faces challenges like computation bottlenecks, privac
 ## Citation
 
 If you use Peer-AI in your research, please cite the original project report and acknowledge the Department of Electronics and Computer Engineering, Pulchowk Campus, Institute of Engineering.
-
----
-
-**Peer-AI: Democratizing distributed machine learning with 5G-powered, privacy-preserving P2P collaboration.**
-
----
-
-*For detailed methodology, results, and references, see the attached project report.*
-
